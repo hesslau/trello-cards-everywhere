@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>trello-cards-simple</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-rc.2/css/materialize.min.css">
+    <link rel="stylesheet" href="./style.css">
+
+	<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript" src="https://api.trello.com/1/client.js?key=fa0ab8a3ae624ee955efb77be24b1cb5" type="text/javascript"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-rc.2/js/materialize.min.js"></script>
+    <!-- development version, includes helpful console warnings -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+	<script src="TrelloConnector.js"></script>
+  </head>
+  <body>
+    <div id="app" class="container">
+        <div class="row">
+            <div id="label-filter">
+                Filter by tag: 
+    	       <div v-for="label in availableLabels" class="filterable btn chip label" :data-needle="label.id" @click="filter">{{ label.name }}</div>
+            </div>
+            <button @click="resetFilter" class="btn chip label red lighten-3">reset filter</button>
+            <button @click="updateCards" class="btn chip label red lighten-3">update cards</button>
+        </div><!-- end row -->
+
+
+        <div class="row">
+            <div class="col s4" v-for="card in cards">
+                <div class="card grey lighten-3" :id="card.id">
+                    <div class="card-content">
+                        <img v-if="card.cover.previews" :src="card.cover.previews[1].url" class="card-cover">
+                        <span class="card-title">{{ card.name }}</span>
+                        <p>{{ card.desc.slice(0,100) + "..." }}</p>
+                        <a class="waves-effect waves-light btn" :data-modalId="'modal' + card.id" @click="showModal">more</a>
+                    </div>
+                </div>
+                <div :id="'modal' + card.id" class="modal modal-fixed-footer">
+                    <div class="modal-content">
+                        <img v-if="card.cover.previews" :src="card.cover.previews[3].url" class="card-cover">
+                        <h4 class="card-title">{{card.name}}</h4>
+                        <p>{{ card.desc }}</p>
+                        <br>
+                        <div class="card-label">
+                        	<div v-for="label in card.labels" class="chip label" :id="label.id">{{ label.name }}</div>
+                        </div>
+                    </div>
+                     <div class="modal-footer card-action">
+                        <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Close</a>
+                    </div>
+                </div>
+
+            </div><!-- end col -->
+        </div><!-- end row -->
+    </div><!-- end app -->
+    <script>
+    	var app = new Vue({
+		  el: '#app',
+		  data: {
+		    cards: []
+		  },
+
+		  computed: {
+		  	availableLabels: function() {
+		  		
+                // accumulate all labels across all cards
+    			accumulatedLabels = this.$data.cards.reduce((acc,card) => acc.concat(card.labels), [])
+    			
+                // filter unique labels
+    			return accumulatedLabels.reduce((acc,label) => { acc[label.id] = label; return acc }, {})
+		  	}
+		  },
+		  methods: {
+
+            updateCards: function(event){
+                var vm = this;
+                event.target.innerHTML = 'updating';
+                $.ajax({
+                  url: '/update_cards.php',
+                  success: function(response) {
+                    event.target.innerHTML = 'updated!';
+                    vm.fetchCards();
+                  }
+                });
+            },
+
+            fetchCards: function() {
+                vm = this;
+                $.getJSON( "data/cards.json", function( JSONresponse ) {
+                    vm.$data.cards = JSONresponse;
+                    vm.$mount();
+                });
+
+            },
+
+		  	showModal: function (event) {
+                // displays modal onclick
+		  		event.preventDefault();
+
+		      	this.modals.find(function(modal) {
+		      		return (modal.el.id == event.target.dataset.modalid);
+		      	}).open()
+    		},
+    		filter: function(event) {
+    			event.preventDefault();
+
+    			this.nonMatchClass = "hide"
+
+    			this.$data.cards.forEach( card => {
+    				$('#'+card.id).addClass(this.nonMatchClass);
+    			})
+
+    			var needle = event.target.getAttribute('data-needle');
+    			var matchingCards = this.$data.cards.filter(card => {
+    				for(i in card.labels) {
+    					console.log(card.labels[i].id,needle)
+    					if(card.labels[i].id == needle) return true
+    				}
+    				return false
+    			})
+    			
+    			matchingCards.forEach( card => {
+    				$('#'+card.id).removeClass(this.nonMatchClass);
+    			})
+    		},
+    		resetFilter: function() {
+    			this.$data.cards.forEach(card => $('#'+card.id).removeClass(this.nonMatchClass) )
+    		}
+		  },
+          created: function() {
+            this.fetchCards();
+           },
+		  mounted: function() {
+                
+    	  		options = {};
+    	  		var elems = document.querySelectorAll('.modal');
+    			this.modals = M.Modal.init(elems, options);
+    	  	}
+		});
+
+    </script>
+  </body>
+</html>

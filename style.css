@@ -1,0 +1,22 @@
+.card-cover {
+	width:100%;padding-right:1rem;
+}
+
+.modal .card-cover {
+	width: 60%;display:block;margin: 0 auto 0 auto;
+	margin-bottom: 1rem;
+}
+
+.card .a.btn {
+	display:block; clear:both; margin-top:15px;
+}
+
+.card {
+	min-height: 400px;
+}
+
+.card-title {
+	max-height: 100px;
+	overflow: hidden;
+}
+
